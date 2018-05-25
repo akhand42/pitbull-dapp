@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.21;
 
 contract AccessControl {
   address public owner;
@@ -47,7 +47,7 @@ contract ERC721 {
     event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
 }
 
-contract ArtistToken is AccessControl, ERC721 {
+contract ArtistTokenContract is AccessControl, ERC721 {
 
   address owner;
   uint256 minTokenPrice;
@@ -62,9 +62,9 @@ contract ArtistToken is AccessControl, ERC721 {
   mapping (address => uint256[]) internal ownerToArtistTokens;
   mapping (uint256 => address) public artistTokenToApproved;
   // Constructor
-  function ArtistToken(uint256 minTokenPrice) public {
+  constructor (uint256 minPrice) public {
     owner = msg.sender;
-    minTokenPrice = minTokenPrice;
+    minTokenPrice = minPrice;
     tokenCount = 0;
   }
 
@@ -72,7 +72,7 @@ contract ArtistToken is AccessControl, ERC721 {
   function registerArtist(bytes32 _name, uint256 count) public payable returns (uint256 artistGene){
     // TODO: Overflow fix!!!!
     require(msg.value >= count * minTokenPrice);
-    uint artistGene = artistCount; // e.g. 1 for KanyeToken, 2 for DiddyToken
+    artistGene = artistCount; // e.g. 1 for KanyeToken, 2 for DiddyToken
     artistCount += 1;
     for (uint i = 0; i < count; i++){
         uint tokenId = artist.push(ArtistToken(artistGene, _name));
@@ -95,10 +95,10 @@ contract ArtistToken is AccessControl, ERC721 {
     return ownerToArtistTokens[_owner].length;
   }
 
-  function ownerOf(uint256 _tokenId) public view returns (address owner) {
-    address owner = artistTokenIdToOwner[_tokenId];
-    require(owner != address(0));
-    return owner;
+  function ownerOf(uint256 _tokenId) public view returns (address artistOwner) {
+    artistOwner = artistTokenIdToOwner[_tokenId];
+    require(artistOwner != address(0));
+    return artistOwner;
   }
 
   function transfer(address _to, uint256 _tokenId) public {
@@ -110,7 +110,7 @@ contract ArtistToken is AccessControl, ERC721 {
     require(artistTokenIdToOwner[_tokenId] == _from);
     artistTokenIdToOwner[_tokenId] = _to;
     uint256[] storage userTokens = ownerToArtistTokens[_from];
-    for (int i = 0; i < userTokens.length; i++){
+    for (uint256 i = 0; i < userTokens.length; i++){
       if (userTokens[i] == _tokenId){
         delete userTokens[i];
         ownerToArtistTokens[_to].push(_tokenId);
@@ -118,23 +118,24 @@ contract ArtistToken is AccessControl, ERC721 {
       }
     }
     artistTokenToApproved[_tokenId] = 0x0;
-    Transfer(msg.sender, _to, _tokenId);
+    emit Transfer(msg.sender, _to, _tokenId);
   }
 
   function _transferSameTokens(address _to, uint256 _artistId, uint256 number) public returns (bool success) {
     require(_to != address(0));
     require(ownerToArtistTokens[msg.sender].length >= number); // sanity check but doesnt guarantee
-    uint _artistIdTokens = 0;
-    uint256[] storage userTokens = ownerToArtistTokens[_from];
-    uint256[] memory indices = new uint256[]; // 453, 24, 2, 222
-    for (uint i = 0; i < userTokens.length; i++){
+    uint256[] storage userTokens = ownerToArtistTokens[msg.sender];
+    uint256[] memory indices = new uint256[](number); // 453, 24, 2, 222
+    uint256 count = 0;
+    for (uint256 i = 0; i < userTokens.length; i++){
       if (artist[userTokens[i]].artistGene == _artistId){
-        indices.push(userTokens[i]);
+        indices[count] = userTokens[i];
+        count += 1;
       }
     }
     if (indices.length >= number){
-      for (uint i = 0; i < number; i++){
-        _transferToken(msg.sender, _to, indices[i]);
+      for (uint256 j = 0; j < number; j++){
+        _transferToken(msg.sender, _to, indices[j]);
       }
       return true;
     }
@@ -144,7 +145,7 @@ contract ArtistToken is AccessControl, ERC721 {
   function approve(address _to, uint256 _tokenId) public {
     require(artistTokenIdToOwner[_tokenId] == msg.sender);
     artistTokenToApproved[_tokenId] = _to;
-    Approval(msg.sender, _to, _tokenId);
+    emit Approval(msg.sender, _to, _tokenId);
   }
 
   function transferFrom(address _from, address _to, uint256 _tokenId) public {
@@ -152,7 +153,7 @@ contract ArtistToken is AccessControl, ERC721 {
     require(artistTokenToApproved[_tokenId] == msg.sender);
     require(artistTokenIdToOwner[_tokenId] == _from);
     _transferToken(_from, _to, _tokenId);
-    Transfer(_from, _to, _tokenId);
+    emit Transfer(_from, _to, _tokenId);
   }
 
   function name() public pure returns (string) {
