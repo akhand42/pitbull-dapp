@@ -52,9 +52,8 @@ contract ERC721 {
 contract ArtistBase is AccessControl {
   struct ArtistToken {
     uint256 artistId; // beyonce, pitbull, etc
-    /* uint256 count; // 1, 2, 3, 4 ... 2*2.147 x 10^10 (unsigned int limit) */
   }
-
+  uint256 ArtistCount;
   Artist[] public artist;
   mapping (uint256 => address) public artistToOwner;
   mapping (address => uint256[]) internal ownerToArtist;
@@ -84,6 +83,35 @@ contract ArtistBase is AccessControl {
     fromTulips[i] = fromTulips[fromTulips.length - 1];
     delete fromTulips[fromTulips.length - 1];
     fromTulips.length--;
+  }
+
+  function registerArtist(bytes32 _name) public payable returns (uint256 id){
+
+  }
+
+  function buyArtistToken(bytes32 _name, uint16 _gen) public payable returns (uint256 id) {
+    require(_gen < genToStartPrice.length);
+    require(msg.value == price(_gen));
+
+    id = _generateTulip(_name, msg.sender, _gen);
+    Transfer(address(0), msg.sender, id);
+    Purchase(msg.sender, price(_gen), 1);
+  }
+
+  function buyTulips(uint32 _amount, uint16 _gen) public payable returns (uint256 firstId) {
+    require(_gen < genToStartPrice.length);
+    require(msg.value == price(_gen) * _amount);
+    require(_amount <= 100);
+
+    for (uint32 i = 0; i < _amount; i++) {
+      uint256 id = _generateTulip("", msg.sender, _gen);
+      Transfer(address(0), msg.sender, id);
+
+      if (i == 0) {
+        firstId = id;
+      }
+    }
+    Purchase(msg.sender, price(_gen), _amount);
   }
 }
 
@@ -153,56 +181,6 @@ contract TulipSales is TulipToken {
   uint128 public startBlock;
   uint256[] public genToStartPrice;
   uint256[23] internal exp15;
-
-  function TulipSales() public {
-    startBlock = uint128(block.number);
-    genToStartPrice.push(10 finney);
-    _setExp15();
-  }
-
-  // The price increases from the starting price at a rate of 1.5x a day, until
-  // a max of 10000x the original price. For gen 0, this corresponds to a cap
-  // of 100 ETH.
-  function price(uint16 _gen) public view returns (uint256) {
-    require(_gen < genToStartPrice.length);
-
-    uint128 periodsElapsed = (uint128(block.number) - startBlock) / increasePeriod;
-    return _priceAtPeriod(periodsElapsed, _gen);
-  }
-
-  function nextPrice(uint16 _gen) public view returns (uint256 futurePrice, uint128 blocksRemaining, uint128 changeBlock) {
-    require(_gen < genToStartPrice.length);
-
-    uint128 periodsElapsed = (uint128(block.number) - startBlock) / increasePeriod;
-    futurePrice = _priceAtPeriod(periodsElapsed + 1, _gen);
-    blocksRemaining = increasePeriod - (uint128(block.number) - startBlock) % increasePeriod;
-    changeBlock = uint128(block.number) + blocksRemaining;
-  }
-
-  function buyTulip(bytes32 _name, uint16 _gen) public payable returns (uint256 id) {
-    require(_gen < genToStartPrice.length);
-    require(msg.value == price(_gen));
-
-    id = _generateTulip(_name, msg.sender, _gen);
-    Transfer(address(0), msg.sender, id);
-    Purchase(msg.sender, price(_gen), 1);
-  }
-
-  function buyTulips(uint32 _amount, uint16 _gen) public payable returns (uint256 firstId) {
-    require(_gen < genToStartPrice.length);
-    require(msg.value == price(_gen) * _amount);
-    require(_amount <= 100);
-
-    for (uint32 i = 0; i < _amount; i++) {
-      uint256 id = _generateTulip("", msg.sender, _gen);
-      Transfer(address(0), msg.sender, id);
-
-      if (i == 0) {
-        firstId = id;
-      }
-    }
-    Purchase(msg.sender, price(_gen), _amount);
-  }
 
   function renameTulip(uint256 _id, bytes32 _name) public {
     require(tulipToOwner[_id] == msg.sender);
