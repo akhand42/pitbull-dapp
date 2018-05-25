@@ -97,15 +97,16 @@ contract ERC721 {
 
 contract ArtistTokenContract is AccessControl, ERC721 {
   using SafeMath for uint256;
+  uint256 artistCount;
   address owner;
   uint256 minTokenPrice;
   uint256 tokenCount;
-  uint256 artistCount;
   struct ArtistToken {
     uint256 artistGene; // beyonce, pitbull, etc
     bytes32 name;
     bool forSale;
-z  }
+    uint256 price;
+  }
   ArtistToken[] public artist;
   mapping (uint256 => address) public artistTokenIdToOwner;
   // map from owner -> (map of artistGene -> artistTokens[])
@@ -124,6 +125,10 @@ z  }
   function myArtistTokens(uint256 artistGene) public view returns (uint256[]) {
     uint256[] memory artistTokens = ownerToArtistGeneMap[msg.sender][artistGene];
     return artistTokens;
+  }
+
+  function numArtists() public view returns (uint256) {
+    return artistCount;
   }
 
   function whoseArtistTokens(uint256 artistGene, address tokenOwner) public view returns (uint256[]) {
