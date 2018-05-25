@@ -61,7 +61,7 @@ contract ArtistTokenContract is AccessControl, ERC721 {
   ArtistToken[] public artist;
   mapping (uint256 => address) public artistTokenIdToOwner;
   // map from owner -> (map of artistGene -> artistTokens[])
-  mapping (address => mapping(uint => uint[])) internal ownerToArtistGeneMap;
+  mapping (address => mapping(uint256 => uint256[])) internal ownerToArtistGeneMap;
   mapping (uint256 => address) public artistTokenToApproved;
   mapping (address => uint256) public userTokenCount;
   // Constructor
@@ -69,6 +69,7 @@ contract ArtistTokenContract is AccessControl, ERC721 {
     owner = msg.sender;
     minTokenPrice = 20000000000000; // around 0.012 cents per token (price at $600 a ether)
     tokenCount = 0;
+    artistCount = 0;
   }
 
   // Artists call this function to create their own ICO.
@@ -132,6 +133,24 @@ contract ArtistTokenContract is AccessControl, ERC721 {
     return false;
   }
 
+  function markForSale(uint256 artistGene, uint256 quantity) public {
+    uint256[] storage singleUserArtistTokens = ownerToArtistGeneMap[msg.sender[artistGene]];
+    require(singleUserArtistTokens.length >= quantity && quantity >= 0);
+    uint256 count = 0;
+    for (uint256 i = 0; i < singleUserArtistTokens.length; i++){
+      ArtistToken storage token = artist[singleUserArtistTokens[i]];
+      if (token.forSale == false){
+        token.forSale = true;
+        count += 1;
+        if (count == quantity){
+          break;
+        }
+      }
+    }
+  }
+  /* function sellSameTokens(address _to, uint256 _artistId, uint256 number){
+
+  } */
 
   function transferSameTokens(address _to, uint256 _artistId, uint256 number) public returns (bool success) {
     require(_to != address(0));
