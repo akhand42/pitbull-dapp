@@ -125,7 +125,7 @@ contract ArtistTokenContract is AccessControl, ERC721 {
         if (artistTokenId == _tokenId){
           delete ownerToArtistGeneMap[_from][artistGene][i];
           ownerToArtistGeneMap[_to][artistGene].push(_tokenId);
-          artist[_tokenId].forSale = false;
+          artist[_tokenId].forSale = true;
           artistTokenToApproved[_tokenId] = 0x0;
           emit Transfer(msg.sender, _to, _tokenId);
           return true;
@@ -180,17 +180,43 @@ contract ArtistTokenContract is AccessControl, ERC721 {
     }
   }
 
+  function buyArtistTokensFromUser(uint256 artistGene, uint256 quantity, uint256 buyPrice, address seller, uint256 sellPrice) public payable returns (bool success){
+    uint256[] storage singleUserArtistTokens = ownerToArtistGeneMap[seller][artistGene];
+    require(singleUserArtistTokens.length >= quantity);
+    // TODO: overflow protection safemath
+    uint256 totalEth = quantity * buyPrice;
+    uint256 forSaleCount = 0;
+    for (uint256 i = 0; i < singleUserArtistTokens.length; i++){
+      if (artist[singleUserArtistTokens[j]].forSale == true){
+        forSaleCount += 1;
+        if (msg.value < totalEth){
+          // not enough money sent
+          require(false);
+        }
+      }
+    }
+    require(forSaleCount >= quantity);
+    uint256 sold = 0;
+    for (uint256 j = 0; j < singleUserArtistTokens.length; j++){
+      if (artist[singleUserArtistTokens[j]].forSale == true){
+        require(_transferToken(seller, msg.sender, singleUserArtistTokens[j]));
+        sold += 1;
+        if (sold == quantity){
+          changePrice(artistGene, quantity, sellPrice);
+          return true;
+        }
+      }
+    }
 
-  /* function sellSameTokens(address _to, uint256 _artistId, uint256 number){
-
-  } */
+    return false;
+  }
 
   function transferSameTokens(address _to, uint256 _artistId, uint256 number) public returns (bool success) {
     require(_to != address(0));
     require(ownerToArtistGeneMap[msg.sender][_artistId].length >= number);
     uint256[] storage userTokens = ownerToArtistGeneMap[msg.sender][_artistId];
     for (uint256 i = 0; i < userTokens.length; i++){
-      _transferToken(msg.sender, _to, userTokens[i]);
+      require(_transferToken(msg.sender, _to, userTokens[i]));
     }
     return true;
   }
