@@ -285,7 +285,6 @@ contract ArtistTokenContract is AccessControl, ERC721 {
         }
       }
     }
-
     return false;
   }
 
