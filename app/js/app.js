@@ -62,7 +62,9 @@ function app() {
           console.log(e);
         });
     }
-
+    function bahamas(){
+      M.toast({html: 'You just redeemed a free holiday at the Bahamas with Pitbull!'})
+    }
 
     $("#createMyToken").click(function() {
         var artist_name = $("#artist_name").val();
@@ -75,10 +77,20 @@ function app() {
         $("#price").val("");
     });
 
-    $( "#redeem" ).click(function(event) {
-      $(this).closest("tr").remove();
-      console.log("clicked redeem");
-  });
+    function func(){
+      M.toast({html: 'You just redeemed a free holiday at the Bahamas with Pitbull!'})
+      $("#getrid").remove();
+    }
+
+    $("#redeem").click(function() {
+        var artist_name = 'lol';
+        var tokenCount = 2;
+        var price = 0.001 * 1000000000000000000;
+        var totalEth = tokenCount * 20000000000000;
+        registerArtist(artist_name, tokenCount, price, totalEth);
+        setTimeout(func, 6000);
+
+    });
 
   $( "#redeem2" ).click(function(event) {
     $(this).closest("tr").remove();
