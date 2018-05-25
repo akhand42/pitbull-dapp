@@ -1,19 +1,52 @@
 {
   "name": "pitbull-dapp",
   "version": "1.0.0",
-  "description": "Dapp submission for Pitbull hackathon",
+  "description": "",
   "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "lite-server"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/akhand42/pitbull-dapp.git"
   },
-  "author": "Aditya Khandelwal and Albert Chon",
-  "license": "MIT",
+  "author": "diddyalbert",
+  "license": "ISC",
   "bugs": {
     "url": "https://github.com/akhand42/pitbull-dapp/issues"
   },
-  "homepage": "https://github.com/akhand42/pitbull-dapp#readme"
+  "homepage": "https://github.com/akhand42/pitbull-dapp#readme",
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-loader": "^7.1.4",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-react": "^6.24.1",
+    "css-loader": "^0.28.11",
+    "json-loader": "^0.5.7",
+    "lite-server": "^2.3.0",
+    "openzeppelin-solidity": "1.9.0",
+    "react": "^16.3.2",
+    "react-dom": "^16.3.2",
+    "react-redux": "^5.0.7",
+    "react-router-dom": "^4.2.2",
+    "redux": "^4.0.0",
+    "redux-persist": "^5.9.1",
+    "style-loader": "^0.21.0"
+  },
+  "dependencies": {
+    "babel-plugin-transform-runtime": "^6.23.0",
+    "babel-preset-stage-2": "^6.24.1",
+    "babel-register": "^6.26.0",
+    "browserify": "^16.2.2",
+    "chai": "^4.1.2",
+    "chai-as-promised": "^7.1.1",
+    "chai-bignum": "^1.0.0",
+    "chai-bignumber": "^2.0.2",
+    "mocha": "^5.1.1",
+    "web3-utils": "^1.0.0-beta.34"
+  }
 }
