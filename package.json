@@ -46,6 +46,8 @@
     "chai-as-promised": "^7.1.1",
     "chai-bignum": "^1.0.0",
     "chai-bignumber": "^2.0.2",
+    "font-awesome": "^4.7.0",
+    "materialize-css": "^1.0.0-rc.1",
     "mocha": "^5.1.1",
     "truffle": "^4.1.11",
     "web3-utils": "^1.0.0-beta.34"
