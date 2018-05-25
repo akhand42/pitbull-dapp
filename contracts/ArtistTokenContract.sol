@@ -97,10 +97,10 @@ contract ERC721 {
 
 contract ArtistTokenContract is AccessControl, ERC721 {
   using SafeMath for uint256;
+  uint256 artistCount;
   address owner;
   uint256 minTokenPrice;
   uint256 tokenCount;
-  uint256 artistCount;
   struct ArtistToken {
     uint256 artistGene; // beyonce, pitbull, etc
     bytes32 name;
@@ -127,6 +127,10 @@ contract ArtistTokenContract is AccessControl, ERC721 {
     return artistTokens;
   }
 
+  function numArtists() public view returns (uint256) {
+    return artistCount;
+  }
+
   function whoseArtistTokens(uint256 artistGene, address tokenOwner) public view returns (uint256[]) {
     uint256[] memory artistTokens = ownerToArtistGeneMap[tokenOwner][artistGene];
     return artistTokens;
@@ -139,20 +143,18 @@ contract ArtistTokenContract is AccessControl, ERC721 {
 
 
   // Artists call this function to create their own ICO.
-  function registerArtist(bytes32 _name, uint256 count, uint256 minPrice) public payable returns
-   (uint256 artistGene){
-    require(msg.value >= SafeMath.mul(count, minTokenPrice));
-    artistGene = artistCount; // e.g. 1 for KanyeToken, 2 for DiddyToken
+  function registerArtist(bytes32 _name, uint256 count, uint256 minPrice) public payable{
+    require(msg.value >= count * minTokenPrice);
+    uint256 artistGene = artistCount; // e.g. 1 for KanyeToken, 2 for DiddyToken
     artistCount += 1;
-    for (uint i = 0; i < count; i++){
-        uint tokenId = artist.push(ArtistToken(artistGene, _name, true, minPrice));
+    for (uint256 i = 0; i < count; i++){
+        uint256 tokenId = artist.push(ArtistToken(artistGene, _name, true, minPrice));
         artistTokenIdToOwner[tokenId] = msg.sender;
         ownerToArtistGeneMap[msg.sender][artistGene].push(tokenId);
     }
     tokenCount += count;
     userTokenCount[msg.sender] += count;
     artistGeneToAddresses[artistGene].push(msg.sender);
-    return artistGene;
   }
 
   function implementsERC721() public pure returns (bool) {

@@ -26,48 +26,42 @@ function app() {
 
         var contractAddress = contractData.networks[networkId].address;
         contract = new web3.eth.Contract(contractData.abi, contractAddress);
+
+
+        contract.methods.numArtists().call()
+        .then(function(num){
+          console.log('num artists '+ num);
+          for (var i = 0; i < num; i++){
+            contract.methods.artistToAddresses(i).call()
+            .then(function(addresses){
+              console.log('addresses '+ addresses);
+
+            })
+          }
+        })
+
+
+
     })
-    // .then(showUserDetails)
     .catch(console.error);
 
-    // function showUserDetails() {
-    //     contract.methods.withdrawAmount(userAccount).call().then(function (total) {
-    //         $('#withdrawDetails').text(web3.utils.fromWei(total, "ether") + " ETH withdrawable");
-    //    });
-    // }
-
     function registerArtist(_name, count, minPrice, totalEth) {
-        contract.methods.registerArtist(web3.utils.fromAscii(_name), count, minPrice).send({from: userAccount, value: totalEth, gas: 250000})
+        contract.methods.registerArtist(web3.utils.fromAscii(_name), count, minPrice).send({from: userAccount, value: totalEth + 1000, gas: 6385876})
         .then(function (name) {
             console.log(name + 'has successfully been created');
+            if (_name === 'Pitbull'){
+              var div = document.createElement('div');
+              div.className += 'col s12 m4';
+              div.innerHTML = "<div class='card purple darken-3'><div class='card-content white-text'><span class='card-title'>Pitbull</span><p>Token ID: 13311</p><p>Price: 1.2 ETH</p><p>Quantity: 38</p></div><div class='card-action'><a href='#'>Buy</a></div></div>"
+              document.getElementById('pitbull').appendChild(div);
+            }
         }).catch(function (e) {
+          console.log(web3.utils.fromAscii(_name));
+          console.log(totalEth); // msg.value
+          console.log(count*20000000000000); //
           console.log(e);
         });
     }
-    //
-    //     contract.methods.poolCreator(poolId).call()
-    //     .then(function (creator) {
-    //         console.log(creator)
-    //         $('#poolDetails2').text('Created by: ' + creator);
-    //         $('#pool1Details2').text('Created by: ' + creator);
-    //     })
-    //
-    //     contract.methods.totalInvestmentForPool(poolId).call()
-    //     .then(function (total) {
-    //         var amount = web3.utils.fromWei(total, "ether");
-    //         console.log(amount);
-    //         $("#poolDetails3").text('Total amount: ' + amount + ' ETH');
-    //         $("#pool1Details3").text('Total amount: ' + amount + ' ETH');
-    //     })
-    //
-    //     contract.methods.getInvestmentByUser(poolId, userAccount).call()
-    //     .then(function (amount) {
-    //         var investment = web3.utils.fromWei(amount, "ether");
-    //         console.log(investment)
-    //         $("#investmentDetails").text('Your investment: ' + investment + ' ETH');
-    //         $("#investment1Details").text('Your investment: ' + investment + ' ETH');
-    //     })
-    //  }
 
 
     $("#createMyToken").click(function() {
@@ -75,12 +69,27 @@ function app() {
         var tokenCount = $("#tokenCount").val();
         var price = $("#price").val() * 1000000000000000000;
         var totalEth = tokenCount * 20000000000000;
-        console.log(artist_name);
-        console.log(tokenCount);
-        console.log(price);
-        console.log(totalEth);
         registerArtist(artist_name, tokenCount, price, totalEth);
+        $("#artist_name").val("");
+        $("#tokenCount").val("");
+        $("#price").val("");
     });
+
+    $( "#redeem" ).click(function(event) {
+      $(this).closest("tr").remove();
+      console.log("clicked redeem");
+  });
+
+  $( "#redeem2" ).click(function(event) {
+    $(this).closest("tr").remove();
+    console.log("clicked redeem");
+});
+
+$( "#redeem3" ).click(function(event) {
+  $(this).closest("tr").remove();
+  console.log("clicked redeem");
+});
+
 }
 
 $(document).ready(app);
