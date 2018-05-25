@@ -49,96 +49,72 @@ contract ERC721 {
     event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
 }
 
-contract ArtistBase is AccessControl {
+contract ArtistToken is AccessControl, ERC721 {
+
+  address owner;
+  uint256 minTokenPrice;
+  uint256 tokenCount;
+  uint256 artistCount;
   struct ArtistToken {
-    uint256 artistId; // beyonce, pitbull, etc
+    uint256 artistGene; // beyonce, pitbull, etc
+    bytes32 name;
   }
-  uint256 ArtistCount;
-  Artist[] public artist;
-  mapping (uint256 => address) public artistToOwner;
-  mapping (address => uint256[]) internal ownerToArtist;
-  mapping (uint256 => address) public artistToApproved;
+  ArtistToken[] public artist;
+  mapping (uint256 => address) public artistTokenIdToOwner;
+  mapping (address => uint256[]) internal ownerToArtistTokens;
 
-  function _generateArtist(bytes32 _name, address _owner) internal returns (uint256 id) {
-    id = tulips.length;
-    Tulip memory newTulip = Tulip(genes, createTime, _name);
-    tulips.push(newTulip);
-    tulipToOwner[id] = _owner;
-    ownerToTulips[_owner].push(id);
+  // Constructor
+  function ArtistToken(uint256 minTokenPrice) public {
+    owner = msg.sender;
+    minTokenPrice = minTokenPrice;
+    tokenCount = 0;
   }
 
-  function _transferArtist(address _from, address _to, uint256 _id) internal {
-    tulipToOwner[_id] = _to;
-    ownerToTulips[_to].push(_id);
-    tulipToApproved[_id] = address(0);
-
-    uint256[] storage fromTulips = ownerToTulips[_from];
-    for (uint256 i = 0; i < fromTulips.length; i++) {
-      if (fromTulips[i] == _id) {
-        break;
-      }
+  // Artists call this function to create their own ICO.
+  function registerArtist(bytes32 _name, uint256 count) public payable returns (uint256 artistGene){
+    // TODO: Overflow fix!!!!
+    require(msg.value >= count * minTokenPrice);
+    uint artistGene = artistCount; // e.g. 1 for KanyeToken, 2 for DiddyToken
+    artistCount += 1;
+    for (uint i = 0; i < count; i++){
+        uint tokenId = artist.push(ArtistToken(artistGene, _name));
+        artistTokenIdToOwner[tokenId] = msg.sender;
+        ownerToArtistTokens[msg.sender].push(tokenId);
     }
-    assert(i < fromTulips.length);
-
-    fromTulips[i] = fromTulips[fromTulips.length - 1];
-    delete fromTulips[fromTulips.length - 1];
-    fromTulips.length--;
+    tokenCount += count;
+    return artistGene;
   }
-
-  function registerArtist(bytes32 _name) public payable returns (uint256 id){
-
-  }
-
-  function buyArtistToken(bytes32 _name, uint16 _gen) public payable returns (uint256 id) {
-    require(_gen < genToStartPrice.length);
-    require(msg.value == price(_gen));
-
-    id = _generateTulip(_name, msg.sender, _gen);
-    Transfer(address(0), msg.sender, id);
-    Purchase(msg.sender, price(_gen), 1);
-  }
-
-  function buyTulips(uint32 _amount, uint16 _gen) public payable returns (uint256 firstId) {
-    require(_gen < genToStartPrice.length);
-    require(msg.value == price(_gen) * _amount);
-    require(_amount <= 100);
-
-    for (uint32 i = 0; i < _amount; i++) {
-      uint256 id = _generateTulip("", msg.sender, _gen);
-      Transfer(address(0), msg.sender, id);
-
-      if (i == 0) {
-        firstId = id;
-      }
-    }
-    Purchase(msg.sender, price(_gen), _amount);
-  }
-}
-
-contract TulipToken is TulipBase, ERC721 {
 
   function implementsERC721() public pure returns (bool) {
     return true;
   }
 
   function totalSupply() public view returns (uint256) {
-    return tulips.length;
+    return tokenCount;
   }
 
   function balanceOf(address _owner) public view returns (uint256 balance) {
-    return ownerToTulips[_owner].length;
+    return ownerToArtistTokens[_owner].length;
   }
 
   function ownerOf(uint256 _tokenId) public view returns (address owner) {
-    owner = tulipToOwner[_tokenId];
+    address owner = artistTokenIdToOwner[_tokenId];
     require(owner != address(0));
+    return owner;
   }
 
   function transfer(address _to, uint256 _tokenId) public {
     require(_to != address(0));
-    require(tulipToOwner[_tokenId] == msg.sender);
-
-    _transferTulip(msg.sender, _to, _tokenId);
+    require(artistTokenIdToOwner[_tokenId] == msg.sender);
+    artistTokenIdToOwner[_tokenId] = _to;
+    uint256[] storage userTokens = ownerToArtistTokens[msg.sender];
+    for (int i = 0; i < userTokens.length; i++){
+      if (userTokens[i] == _tokenId){
+        delete userTokens[i];
+        ownerToArtistTokens[_to].push(_tokenId);
+        break;
+      }
+    }
     Transfer(msg.sender, _to, _tokenId);
   }
 
@@ -166,12 +142,6 @@ contract TulipToken is TulipBase, ERC721 {
     return "ARTE";
   }
 
-  function tokenOfOwnerByIndex(address _owner, uint256 _index) public view returns (uint256) {
-    require(_index < ownerToTulips[_owner].length);
-    return ownerToTulips[_owner][_index];
-  }
-
-  // function tokenMetadata(uint256 _tokenId) public view returns (string infoUrl);
 }
 
 contract TulipSales is TulipToken {
