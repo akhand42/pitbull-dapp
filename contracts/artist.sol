@@ -57,6 +57,7 @@ contract ArtistTokenContract is AccessControl, ERC721 {
     uint256 artistGene; // beyonce, pitbull, etc
     bytes32 name;
     bool forSale;
+    uint256 price;
   }
   ArtistToken[] public artist;
   mapping (uint256 => address) public artistTokenIdToOwner;
@@ -73,13 +74,14 @@ contract ArtistTokenContract is AccessControl, ERC721 {
   }
 
   // Artists call this function to create their own ICO.
-  function registerArtist(bytes32 _name, uint256 count) public payable returns (uint256 artistGene){
+  function registerArtist(bytes32 _name, uint256 count, uint256 minPrice) public payable returns
+   (uint256 artistGene){
     // TODO: Overflow fix!!!!
     require(msg.value >= count * minTokenPrice);
     artistGene = artistCount; // e.g. 1 for KanyeToken, 2 for DiddyToken
     artistCount += 1;
     for (uint i = 0; i < count; i++){
-        uint tokenId = artist.push(ArtistToken(artistGene, _name, false));
+        uint tokenId = artist.push(ArtistToken(artistGene, _name, true, minPrice));
         artistTokenIdToOwner[tokenId] = msg.sender;
         ownerToArtistGeneMap[msg.sender][artistGene].push(tokenId);
     }
@@ -133,14 +135,25 @@ contract ArtistTokenContract is AccessControl, ERC721 {
     return false;
   }
 
-  function markForSale(uint256 artistGene, uint256 quantity) public {
-    uint256[] storage singleUserArtistTokens = ownerToArtistGeneMap[msg.sender[artistGene]];
+  function changePrice(uint256 artistGene, uint256 quantity, uint256 price) public {
+    uint256[] storage singleUserArtistTokens = ownerToArtistGeneMap[msg.sender][artistGene];
+    require(singleUserArtistTokens.length >= quantity && quantity >= 0);
+    for (uint256 i = 0; i < singleUserArtistTokens.length; i++){
+      ArtistToken storage token = artist[singleUserArtistTokens[i]];
+      if (token.forSale == true){
+        token.price = price;
+      }
+    }
+  }
+
+  function markNotForSale(uint256 artistGene, uint256 quantity) public {
+    uint256[] storage singleUserArtistTokens = ownerToArtistGeneMap[msg.sender][artistGene];
     require(singleUserArtistTokens.length >= quantity && quantity >= 0);
     uint256 count = 0;
     for (uint256 i = 0; i < singleUserArtistTokens.length; i++){
       ArtistToken storage token = artist[singleUserArtistTokens[i]];
-      if (token.forSale == false){
-        token.forSale = true;
+      if (token.forSale == true){
+        token.forSale = false;
         count += 1;
         if (count == quantity){
           break;
@@ -148,6 +161,26 @@ contract ArtistTokenContract is AccessControl, ERC721 {
       }
     }
   }
+
+  function markForSale(uint256 artistGene, uint256 quantity, uint256 price) public {
+    uint256[] storage singleUserArtistTokens = ownerToArtistGeneMap[msg.sender][artistGene];
+    require(singleUserArtistTokens.length >= quantity && quantity >= 0);
+    changePrice(artistGene, quantity, price);
+    uint256 count = 0;
+    for (uint256 i = 0; i < singleUserArtistTokens.length; i++){
+      ArtistToken storage token = artist[singleUserArtistTokens[i]];
+      if (token.forSale == false){
+        token.forSale = true;
+        count += 1;
+        token.price = price;
+        if (count == quantity){
+          break;
+        }
+      }
+    }
+  }
+
+
   /* function sellSameTokens(address _to, uint256 _artistId, uint256 number){
 
   } */
