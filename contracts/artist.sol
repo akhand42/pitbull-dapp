@@ -56,15 +56,18 @@ contract ArtistTokenContract is AccessControl, ERC721 {
   struct ArtistToken {
     uint256 artistGene; // beyonce, pitbull, etc
     bytes32 name;
+    bool forSale;
   }
   ArtistToken[] public artist;
   mapping (uint256 => address) public artistTokenIdToOwner;
-  mapping (address => uint256[]) internal ownerToArtistTokens;
+  // map from owner -> (map of artistGene -> artistTokens[])
+  mapping (address => mapping(uint => uint[])) internal ownerToArtistGeneMap;
   mapping (uint256 => address) public artistTokenToApproved;
+  mapping (address => uint256) public userTokenCount;
   // Constructor
-  constructor (uint256 minPrice) public {
+  constructor () public {
     owner = msg.sender;
-    minTokenPrice = minPrice;
+    minTokenPrice = 20000000000000; // around 0.012 cents per token (price at $600 a ether)
     tokenCount = 0;
   }
 
@@ -75,11 +78,12 @@ contract ArtistTokenContract is AccessControl, ERC721 {
     artistGene = artistCount; // e.g. 1 for KanyeToken, 2 for DiddyToken
     artistCount += 1;
     for (uint i = 0; i < count; i++){
-        uint tokenId = artist.push(ArtistToken(artistGene, _name));
+        uint tokenId = artist.push(ArtistToken(artistGene, _name, false));
         artistTokenIdToOwner[tokenId] = msg.sender;
-        ownerToArtistTokens[msg.sender].push(tokenId);
+        ownerToArtistGeneMap[msg.sender][artistGene].push(tokenId);
     }
     tokenCount += count;
+    userTokenCount[msg.sender] += count;
     return artistGene;
   }
 
@@ -92,7 +96,7 @@ contract ArtistTokenContract is AccessControl, ERC721 {
   }
 
   function balanceOf(address _owner) public view returns (uint256 balance) {
-    return ownerToArtistTokens[_owner].length;
+    return userTokenCount[_owner];
   }
 
   function ownerOf(uint256 _tokenId) public view returns (address artistOwner) {
@@ -105,41 +109,38 @@ contract ArtistTokenContract is AccessControl, ERC721 {
     _transferToken(msg.sender, _to, _tokenId);
   }
 
-  function _transferToken(address _from, address _to, uint256 _tokenId) internal{
+  function _transferToken(address _from, address _to, uint256 _tokenId) internal returns (bool success){
     require(_to != address(0));
     require(artistTokenIdToOwner[_tokenId] == _from);
     artistTokenIdToOwner[_tokenId] = _to;
-    uint256[] storage userTokens = ownerToArtistTokens[_from];
-    for (uint256 i = 0; i < userTokens.length; i++){
-      if (userTokens[i] == _tokenId){
-        delete userTokens[i];
-        ownerToArtistTokens[_to].push(_tokenId);
-        break;
+    uint256 artistGene = artist[_tokenId].artistGene;
+    uint256[] storage singleUserArtistTokens = ownerToArtistGeneMap[_from][artistGene];
+    if (singleUserArtistTokens.length > 0){ // TODO: verify if this a valid way to check existence
+      require(singleUserArtistTokens.length > 0);
+      for (uint256 i = 0; i < singleUserArtistTokens.length; i++){
+        uint256 artistTokenId = singleUserArtistTokens[i];
+        if (artistTokenId == _tokenId){
+          delete ownerToArtistGeneMap[_from][artistGene][i];
+          ownerToArtistGeneMap[_to][artistGene].push(_tokenId);
+          artist[_tokenId].forSale = false;
+          artistTokenToApproved[_tokenId] = 0x0;
+          emit Transfer(msg.sender, _to, _tokenId);
+          return true;
+        }
       }
-    }
-    artistTokenToApproved[_tokenId] = 0x0;
-    emit Transfer(msg.sender, _to, _tokenId);
-  }
-
-  function _transferSameTokens(address _to, uint256 _artistId, uint256 number) public returns (bool success) {
-    require(_to != address(0));
-    require(ownerToArtistTokens[msg.sender].length >= number); // sanity check but doesnt guarantee
-    uint256[] storage userTokens = ownerToArtistTokens[msg.sender];
-    uint256[] memory indices = new uint256[](number); // 453, 24, 2, 222
-    uint256 count = 0;
-    for (uint256 i = 0; i < userTokens.length; i++){
-      if (artist[userTokens[i]].artistGene == _artistId){
-        indices[count] = userTokens[i];
-        count += 1;
-      }
-    }
-    if (indices.length >= number){
-      for (uint256 j = 0; j < number; j++){
-        _transferToken(msg.sender, _to, indices[j]);
-      }
-      return true;
     }
     return false;
+  }
+
+
+  function transferSameTokens(address _to, uint256 _artistId, uint256 number) public returns (bool success) {
+    require(_to != address(0));
+    require(ownerToArtistGeneMap[msg.sender][_artistId].length >= number);
+    uint256[] storage userTokens = ownerToArtistGeneMap[msg.sender][_artistId];
+    for (uint256 i = 0; i < userTokens.length; i++){
+      _transferToken(msg.sender, _to, userTokens[i]);
+    }
+    return true;
   }
 
   function approve(address _to, uint256 _tokenId) public {
