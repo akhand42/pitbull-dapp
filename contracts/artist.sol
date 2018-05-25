@@ -73,6 +73,16 @@ contract ArtistTokenContract is AccessControl, ERC721 {
     artistCount = 0;
   }
 
+  function myArtistTokens(uint256 artistGene) public view returns (uint256[]) {
+    uint256[] memory artistTokens = ownerToArtistGeneMap[msg.sender][artistGene];
+    return artistTokens;
+  }
+
+  function whoseArtistTokens(uint256 artistGene, address tokenOwner) public view returns (uint256[]) {
+    uint256[] memory artistTokens = ownerToArtistGeneMap[tokenOwner][artistGene];
+    return artistTokens;
+  }
+
   // Artists call this function to create their own ICO.
   function registerArtist(bytes32 _name, uint256 count, uint256 minPrice) public payable returns
    (uint256 artistGene){
