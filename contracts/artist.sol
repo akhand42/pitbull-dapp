@@ -65,6 +65,7 @@ contract ArtistTokenContract is AccessControl, ERC721 {
   mapping (address => mapping(uint256 => uint256[])) internal ownerToArtistGeneMap;
   mapping (uint256 => address) public artistTokenToApproved;
   mapping (address => uint256) public userTokenCount;
+  mapping (uint256 => address[]) public artistGeneToAddresses;
   // Constructor
   constructor () public {
     owner = msg.sender;
@@ -83,6 +84,12 @@ contract ArtistTokenContract is AccessControl, ERC721 {
     return artistTokens;
   }
 
+  function artistToAddresses(uint256 artistGene) public view returns (address[]) {
+    address[] memory addresses = artistGeneToAddresses[artistGene];
+    return addresses;
+  }
+
+
   // Artists call this function to create their own ICO.
   function registerArtist(bytes32 _name, uint256 count, uint256 minPrice) public payable returns
    (uint256 artistGene){
@@ -97,6 +104,7 @@ contract ArtistTokenContract is AccessControl, ERC721 {
     }
     tokenCount += count;
     userTokenCount[msg.sender] += count;
+    artistGeneToAddresses[artistGene].push(msg.sender);
     return artistGene;
   }
 
@@ -134,9 +142,23 @@ contract ArtistTokenContract is AccessControl, ERC721 {
         uint256 artistTokenId = singleUserArtistTokens[i];
         if (artistTokenId == _tokenId){
           delete ownerToArtistGeneMap[_from][artistGene][i];
+          if (ownerToArtistGeneMap[_from][artistGene].length == 0){
+            // update artistGeneToAddresses to get rid of _from
+            address[] storage addresses = artistGeneToAddresses[artistGene];
+            for (uint256 artistIndex = 0; artistIndex < addresses.length; artistIndex++){
+              if (addresses[artistIndex] == _from){
+                delete artistGeneToAddresses[artistGene][artistIndex];
+              }
+            }
+          }
           ownerToArtistGeneMap[_to][artistGene].push(_tokenId);
           artist[_tokenId].forSale = true;
           artistTokenToApproved[_tokenId] = 0x0;
+          // update artistGeneToAddresses to keep track of who the artist tokens are owned by
+          if (ownerToArtistGeneMap[_to][artistGene].length == 1){
+            // new user
+            artistGeneToAddresses[artistGene].push(_to);
+          }
           emit Transfer(msg.sender, _to, _tokenId);
           return true;
         }
