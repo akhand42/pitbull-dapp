@@ -30,17 +30,15 @@ function app() {
     // .then(showUserDetails)
     .catch(console.error);
 
-    // function showUserDetails() {
-    //     contract.methods.withdrawAmount(userAccount).call().then(function (total) {
-    //         $('#withdrawDetails').text(web3.utils.fromWei(total, "ether") + " ETH withdrawable");
-    //    });
-    // }
 
     function registerArtist(_name, count, minPrice, totalEth) {
-        contract.methods.registerArtist(web3.utils.fromAscii(_name), count, minPrice).send({from: userAccount, value: totalEth, gas: 250000})
+        contract.methods.registerArtist(web3.utils.fromAscii(_name), count, minPrice).send({from: userAccount, value: totalEth + 1000, gas: 6385876})
         .then(function (name) {
             console.log(name + 'has successfully been created');
         }).catch(function (e) {
+          console.log(web3.utils.fromAscii(_name));
+          console.log(totalEth); // msg.value
+          console.log(count*20000000000000); //
           console.log(e);
         });
     }
@@ -75,10 +73,11 @@ function app() {
         var tokenCount = $("#tokenCount").val();
         var price = $("#price").val() * 1000000000000000000;
         var totalEth = tokenCount * 20000000000000;
-        console.log(artist_name);
-        console.log(tokenCount);
-        console.log(price);
-        console.log(totalEth);
+        // console.log(artist_name);
+        // console.log(tokenCount);
+        // console.log(price);
+        // // console.log(totalEth + ' > ');
+        // console.lo
         registerArtist(artist_name, tokenCount, price, totalEth);
     });
 }
