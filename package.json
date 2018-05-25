@@ -1,0 +1,19 @@
+{
+  "name": "pitbull-dapp",
+  "version": "1.0.0",
+  "description": "Dapp submission for Pitbull hackathon",
+  "main": "truffle-config.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akhand42/pitbull-dapp.git"
+  },
+  "author": "Aditya Khandelwal and Albert Chon",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/akhand42/pitbull-dapp/issues"
+  },
+  "homepage": "https://github.com/akhand42/pitbull-dapp#readme"
+}
