@@ -1,5 +1,4 @@
-pragma solidity ^0.4.21;
-
+pragma experimental ABIEncoderV2;
 
 /**
  * @title SafeMath
@@ -80,42 +79,46 @@ contract ERC1178 {
     // Required Functions
     function implementsERC1178() public pure returns (bool);
     function totalSupply() public view returns (uint256);
-    function individualSupply(uint256 _classId) public view returns (uint256);
+    function individualSupply(uint256 classId) public view returns (uint256);
     function balanceOf(address owner, uint256 classId) public view returns (uint256);
     function classesOwned(address owner) public view returns (uint256[]);
     function transfer(address to, uint256 classId, uint256 quantity) public;
     function approve(address to, uint256 classId, uint256 quantity) public;
-    function transferFrom(address from, address to, uint256 tokenId) public;
+    function transferFrom(address from, address to, uint256 classId) public;
 
     // Optional Functions
     function name() public pure returns (string);
-    function className(uint256 classId) public pure returns (string);
+    function className(uint256 classId) public view returns (bytes32);
     function symbol() public pure returns (string);
 
     // Required Events
-    event Transfer(address indexed from, address indexed to, uint256 indexed classId, uint256 indexed quantity);
-    event Approval(address indexed owner, address indexed approved, uint256 indexed classId, uint256 indexed quantity);
+    event Transfer(address indexed from, address indexed to, uint256 indexed classId, uint256 quantity);
+    event Approval(address indexed owner, address indexed approved, uint256 indexed classId, uint256 quantity);
 }
 
 contract ArtistTokenContract is AccessControl, ERC1178 {
   using SafeMath for uint256;
-  address public owner;
+  address public Owner;
   uint256 public tokenCount;
   uint256 currentClass;
+  uint256 minTokenPrice;
+  uint256 minCount;
   struct Transactor {
     address actor;
     uint256 amount;
   }
   mapping(uint256 => uint256) public classIdToSupply;
   mapping(address => mapping(uint256 => uint256)) ownerToClassToBalance;
-  mapping(Transactor => Transactor) approvals;
-
+  mapping(address => mapping(uint256 => Transactor)) approvals;
+  mapping(uint256 => bytes32) public classNames;
 
   // Constructor
   constructor () public {
-    owner = msg.sender;
-    tokenCount = 0;
+    Owner = msg.sender;
     currentClass = 1;
+    tokenCount = 0;
+    minCount = 10000; // min of 10000 tokens
+    minTokenPrice = 20000000000000; // around 0.012 cents per token (price at $600 a ether)
   }
 
   function implementsERC1178() public pure returns (bool) {
@@ -127,12 +130,12 @@ contract ArtistTokenContract is AccessControl, ERC1178 {
   }
 
   function individualSupply(uint256 classId) public view returns (uint256) {
-    return classIdToSupply[_classId];
+    return classIdToSupply[classId];
   }
 
   function balanceOf(address owner, uint256 classId) public view returns (uint256) {
-    /* if (addressToClassToBalance[_owner] == 0) return 0; */
-    // TODO: make checks to see if addressToClassToBalance[_owner] and return 0 if u get the empty mapping
+    /* if (ownerToClassToBalance[owner] == 0) return 0; */
+    // TODO: make checks to see if ownerToClassToBalance[owner] and return 0 if u get the empty mapping
     return ownerToClassToBalance[owner][classId];
   }
 
@@ -141,76 +144,64 @@ contract ArtistTokenContract is AccessControl, ERC1178 {
     uint256[] memory tempClasses = new uint256[](tokenCount);
     uint256 count = 0;
     for (uint256 i = 1; i < currentClass; i++){
-      if (addressToClassToBalance[_owner][i] != 0){
-        tempClasses[count] = addressToClassToBalance[_owner][i];
+      if (ownerToClassToBalance[owner][i] != 0){
+        tempClasses[count] = ownerToClassToBalance[owner][i];
         count += 1;
       }
     }
     uint256[] memory classes = new uint256[](count);
     for (i = 0; i < count; i++){
-      classes[i] = tempClasses[i]
+      classes[i] = tempClasses[i];
     }
     return classes;
   }
 
   function transfer(address to, uint256 classId, uint256 quantity) public {
-    require(addressToClassToBalance[msg.sender][classId] >= quantity);
-    addressToClassToBalance[msg.sender][classId] -= quantity;
-    addressToClassToBalance[to][classId] += quantity;
+    require(ownerToClassToBalance[msg.sender][classId] >= quantity);
+    ownerToClassToBalance[msg.sender][classId] -= quantity;
+    ownerToClassToBalance[to][classId] += quantity;
+    Transactor memory zeroApproval;
+    zeroApproval = Transactor(0x0, 0);
+    approvals[msg.sender][classId] = zeroApproval;
   }
 
   function approve(address to, uint256 classId, uint256 quantity) public {
     require(ownerToClassToBalance[msg.sender][classId] >= quantity);
-    struct Transactor ownerApproval = Transactor(msg.sender, classId);
-    struct Transactor takerApproval = Transactor(to, quantity);
-    approvals[ownerApproval] = takerApproval;
+    Transactor memory takerApproval;
+    takerApproval = Transactor(to, quantity);
+    approvals[msg.sender][classId] = takerApproval;
     emit Approval(msg.sender, to, classId, quantity);
   }
 
-  function transferFrom(address _from, address _to, uint256 _tokenId) public {
-
-    emit Transfer(_from, _to, _tokenId);
+  function transferFrom(address from, address to, uint256 classId) public {
+    Transactor storage takerApproval = approvals[from][classId];
+    uint256 quantity = takerApproval.amount;
+    require(takerApproval.actor == to && quantity >= ownerToClassToBalance[from][classId]);
+    ownerToClassToBalance[from][classId] -= quantity;
+    ownerToClassToBalance[to][classId] += quantity;
+    Transactor memory zeroApproval;
+    zeroApproval = Transactor(0x0, 0);
+    approvals[from][classId] = zeroApproval;
   }
 
   function name() public pure returns (string) {
-    return "Artist Token";
+    return "Multi-Class Artist Token";
   }
 
-  function className(uint256 classId) public pure returns (string){
-
+  function className(uint256 classId) public view returns (bytes32){
+    return classNames[classId];
   }
 
   function symbol() public pure returns (string) {
     return "ARTE";
   }
 
-  // non-ERC721 functions
-
-  function myArtistTokens(uint256 artistGene) public view returns (uint256[]) {
-    return artistTokens;
-  }
-
-  function numArtists() public view returns (uint256) {
-    return artistCount;
-  }
-
-  function artistToAddresses(uint256 artistGene) public view returns (address[]) {
-    return addresses;
-  }
-
-  // Artists call this function to create their own ICO.
-  function registerArtist(bytes32 _name, uint256 count, uint256 minPrice) public payable{
-    require(msg.value >= count * minTokenPrice);
-    uint256 artistGene = artistCount; // e.g. 1 for KanyeToken, 2 for DiddyToken
-    artistCount += 1;
-    for (uint256 i = 0; i < count; i++){
-        uint256 tokenId = artist.push(ArtistToken(artistGene, _name, true, minPrice));
-        artistTokenIdToOwner[tokenId] = msg.sender;
-        ownerToArtistGeneMap[msg.sender][artistGene].push(tokenId);
-    }
-    tokenCount += count;
-    userTokenCount[msg.sender] += count;
-    artistGeneToAddresses[artistGene].push(msg.sender);
+  // Artists call this function to create their own token offering
+  function registerArtist(bytes32 artistName, uint256 count) public payable{
+    require(msg.value >= count * minTokenPrice && count >= minCount);
+    ownerToClassToBalance[msg.sender][currentClass] = count;
+    classNames[count] = artistName;
+    currentClass += 1;
   }
 
 }
