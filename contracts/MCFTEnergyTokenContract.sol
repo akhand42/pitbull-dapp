@@ -111,7 +111,6 @@ contract MCFTEnergyTokenContract is AccessControl, ERC1178 {
   struct TokenExchangeRate {
     uint256 heldAmount;
     uint256 takeAmount;
-    uint256 multiplier;
   }
   mapping(uint256 => uint256) public classIdToSupply;
   mapping(address => mapping(uint256 => uint256)) ownerToClassToBalance;
@@ -182,17 +181,11 @@ contract MCFTEnergyTokenContract is AccessControl, ERC1178 {
     emit Approval(msg.sender, to, classId, quantity);
   }
 
-  function approveForToken(address to, uint256 classIdHeld, uint256 quantityHeld,
-    uint256 classIdWanted, uint256 quantityWanted, uint256 multiplier) public {
+  function approveForToken(uint256 classIdHeld, uint256 quantityHeld,
+    uint256 classIdWanted, uint256 quantityWanted) public {
     require(ownerToClassToBalance[msg.sender][classIdHeld] >= quantityHeld);
-    if (quantityHeld > quantityWanted){
-      require(SafeMath.mul(quantityHeld, multiplier) > quantityHeld);
-    }else{
-      require(SafeMath.mul(quantityWanted, multiplier) > quantityWanted);
-    }
-    mapping(address => mapping(uint256 => mapping(uint256 => TokenExchangeRate))) exchangeRates;
     TokenExchangeRate memory tokenExchangeApproval;
-    tokenExchangeApproval = TokenExchangeRate(quantityHeld, quantityWanted, multiplier);
+    tokenExchangeApproval = TokenExchangeRate(quantityHeld, quantityWanted);
     exchangeRates[msg.sender][classIdHeld][classIdWanted] = tokenExchangeApproval;
   }
 
@@ -201,39 +194,33 @@ contract MCFTEnergyTokenContract is AccessControl, ERC1178 {
     A wants to exchange his quantityHeld amount of token classIdHeld
     in exchange for person to's quantityWanted amount of tokens of classIdWanted
 
+
+
     X tokenA to Y tokenB
             or
     W tokenA to Z tokenB
   */
   function exchange(address to, uint256 classIdPosted, uint256 quantityPosted,
-    uint256 classIdWanted, uint256 quantityWanted, uint256 multiplier) {
+    uint256 classIdWanted, uint256 quantityWanted) public {
       // check if capital existence requirements are met by both parties
       require(ownerToClassToBalance[msg.sender][classIdPosted] >= quantityPosted);
       require(ownerToClassToBalance[to][classIdWanted] >= quantityWanted);
       // check if approvals are met
       require(approvals[msg.sender][classIdPosted].actor == address(this) &&
         approvals[msg.sender][classIdPosted].amount >= quantityPosted);
-
-      mapping(address => mapping(uint256 => Transactor)) approvals;
-      // check if trade is feasible
-      if (quantityPosted > quantityWanted){
-        require(SafeMath.mul(quantityPosted, multiplier) > quantityPosted);
-      }else{
-        require(SafeMath.mul(quantityWanted, multiplier) > quantityWanted);
-      }
+      require(approvals[to][classIdWanted].actor == address(this) &&
+        approvals[to][classIdWanted].amount >= quantityWanted);
       // check if exchange rate is acceptable
-
-
-      /**
-
-
-        // check which balances to decrement
-
-
-      */
-
-
-
+      TokenExchangeRate storage rate = exchangeRates[to][classIdWanted][classIdPosted];
+      require(SafeMath.mul(rate.takeAmount, quantityWanted) < SafeMath.mul(rate.heldAmount, quantityPosted));
+      // update balances
+      ownerToClassToBalance[msg.sender][classIdPosted] -= quantityPosted;
+      ownerToClassToBalance[to][classIdPosted] += quantityPosted;
+      ownerToClassToBalance[msg.sender][classIdWanted] += quantityWanted;
+      ownerToClassToBalance[to][classIdWanted] -= quantityWanted;
+      // update approvals and
+      approvals[msg.sender][classIdPosted].amount -= quantityPosted;
+      approvals[to][classIdWanted].amount -= quantityWanted;
     }
 
   function transferFrom(address from, address to, uint256 classId) public {
