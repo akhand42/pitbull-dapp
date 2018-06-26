@@ -96,7 +96,7 @@ contract ERC1178 {
     event Approval(address indexed owner, address indexed approved, uint256 indexed classId, uint256 quantity);
 }
 
-contract ArtistTokenContract is AccessControl, ERC1178 {
+contract MCFTArtistTokenContract is AccessControl, ERC1178 {
   using SafeMath for uint256;
   address public Owner;
   uint256 public tokenCount;
